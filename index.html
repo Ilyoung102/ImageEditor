@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Editor - Pro (v1.65)</title>
+    <title>AI Image Editor - Pro (v1.66)</title>
     
     <!-- External Libraries (CDN) -->
     <!-- Tailwind CSS -->
@@ -623,7 +623,8 @@
     <div class="workspace">
         <!-- Tools (Monochrome Pro Style) -->
         <div class="left-toolbar">
-            <div class="tool-btn active" id="tool-select" onclick="setTool('select')" title="이동 (V)"><i data-lucide="mouse-pointer-2" size="14"></i></div>
+            <div class="tool-btn active" id="tool-select" onclick="setTool('select')" title="선택/이동 (V)"><i data-lucide="mouse-pointer-2" size="14"></i></div>
+            <div class="tool-btn" id="tool-canvas-pan" onclick="setTool('hand')" title="캔버스 패닝 (H)"><i data-lucide="hand" size="14"></i></div>
             
             <!-- Selection Tools -->
             <div class="tool-btn group" id="tool-marquee" title="선택 도구 (M)">
@@ -641,7 +642,6 @@
             <div class="tool-btn" id="tool-magic-wand" onclick="setTool('marquee-wand')" title="매직봉 (W)">
                 <i data-lucide="wand-2" size="14"></i>
             </div>
-            <div class="tool-btn" id="tool-hand" onclick="setTool('hand')" title="손 도구 (Space)"><i data-lucide="hand" size="14"></i></div>
             <div class="tool-btn" onclick="startCrop()" title="자르기 (Ent/Dbl)"><i data-lucide="crop" size="14"></i></div>
             
             <div class="w-5 h-px bg-[#3f3f3f] my-1"></div>
@@ -775,6 +775,11 @@
             </div>
 
             <!-- Color Palette Bar (12 Colors) -->
+            <div class="color-bar-header flex items-center justify-between px-3 py-1 border-b border-[#1f1f1f] bg-[#252526] cursor-pointer select-none" onclick="toggleRightSection('color-bar-body')" title="색상 팔레트 토글">
+                <span class="text-[10px] text-gray-400 font-bold uppercase">Colors 🎨</span>
+                <span id="color-bar-toggle-icon" class="text-gray-500 text-[10px]">▲</span>
+            </div>
+            <div id="color-bar-body">
             <div class="color-bar">
                 <div class="color-swatch bg-white" onclick="pickColor('#ffffff')" title="White"></div>
                 <div class="color-swatch bg-gray-400" onclick="pickColor('#9ca3af')" title="Gray"></div>
@@ -789,6 +794,7 @@
                 <div class="color-swatch bg-pink-500" onclick="pickColor('#ec4899')" title="Pink"></div>
                 <div class="color-swatch bg-[#a16207]" onclick="pickColor('#a16207')" title="Brown"></div>
             </div>
+            </div><!-- /color-bar-body -->
             
             <div id="layers-list" class="flex-1 overflow-y-auto relative">
                 <div class="p-4 text-center text-[10px] text-gray-600">No Layers</div>
@@ -802,8 +808,10 @@
                 <div id="history-list" class="flex-1 overflow-y-auto"></div>
             </div>
 
-            <!-- v1.50: 아이콘/모양 모음 (스크롤) -->
-            <div class="panel-header border-t border-[#333] bg-[#252526]">Shapes 🎴</div>
+            <div class="panel-header border-t border-[#333] bg-[#252526] flex items-center justify-between cursor-pointer select-none pr-2" onclick="toggleRightSection('shape-icons')" title="Shapes 토글">
+                <span>Shapes 🎴</span>
+                <span id="shape-icons-toggle-icon" class="text-gray-500 text-[10px]">▲</span>
+            </div>
             <div class="p-2 grid grid-cols-4 gap-1 max-h-[140px] overflow-y-auto" id="shape-icons">
                 <button class="shape-icon-btn" onclick="addShapeIcon('heart')" title="하트">❤️</button>
                 <button class="shape-icon-btn" onclick="addShapeIcon('diamond')" title="다이아몬드">♦️</button>
@@ -1169,7 +1177,7 @@
     function saveApiKey() { const input = document.getElementById('input-api-key').value.trim(); if (!input) { alert("API Key를 입력해주세요."); return; } apiKey = input; localStorage.setItem("gemini_api_key", apiKey); closeApiKeyModal(); alert("API Key가 저장되었습니다."); }
     function checkApiKey() { if (!apiKey) { openApiKeyModal(); return false; } return true; }
 
-    const APP_VERSION = "1.65"; 
+    const APP_VERSION = "1.66"; 
     document.getElementById('version-display').innerText = `v${APP_VERSION}`;
 
     const canvas = new fabric.Canvas('editor-canvas', { backgroundColor: 'transparent', preserveObjectStacking: true, selection: true });
@@ -1262,7 +1270,7 @@
             clientX = evt.clientX;
             clientY = evt.clientY;
         }
-        if (isSpaceHeld || evt.button === 1 || document.getElementById('tool-hand').classList.contains('active')) { isPanning = true; startPanX = clientX - panX; startPanY = clientY - panY; canvasArea.classList.add('panning'); return; }
+        if (isSpaceHeld || evt.button === 1 || document.getElementById('tool-canvas-pan').classList.contains('active')) { isPanning = true; startPanX = clientX - panX; startPanY = clientY - panY; canvasArea.classList.add('panning'); return; }
         const pointer = canvas.getPointer(evt);
         
         // --- NEW: Line Drawing Start ---
@@ -2214,6 +2222,17 @@
 
     function toggleFilterPanel() { const panel = document.getElementById('filter-panel'); panel.style.display = panel.style.display === 'block' ? 'none' : 'block'; }
 
+    // v1.66: 오른쪽 패널 섹션 토글
+    function toggleRightSection(sectionId) {
+        const el = document.getElementById(sectionId);
+        if (!el) return;
+        const iconId = sectionId + '-toggle-icon';
+        const icon = document.getElementById(iconId);
+        const isHidden = el.style.display === 'none';
+        el.style.display = isHidden ? '' : 'none';
+        if (icon) icon.textContent = isHidden ? '▲' : '▼';
+    }
+
     // v1.65: 필터 안전 적용 헬퍼 ─ Fabric.js 5.x Convolute 버그 완전 수정
     // 근본 원인: applyFilters() 후 내부 _element 교체 시 obj.width/height 자체가 변함
     //           scaleX/Y 복원만으론 부족 → 화면 표시 크기(px) 기준으로 scale 재계산
@@ -2328,7 +2347,7 @@
         document.getElementById('gen-fill-panel').classList.add('hidden'); hideMagicWandPanel(); document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active')); document.getElementById('canvas-area').classList.remove('panning');
         
         if(mode === 'select') document.getElementById('tool-select').classList.add('active');
-        if(mode === 'hand') { document.getElementById('tool-hand').classList.add('active'); document.getElementById('canvas-area').classList.add('panning'); }
+        if(mode === 'hand') { document.getElementById('tool-canvas-pan').classList.add('active'); document.getElementById('canvas-area').classList.add('panning'); }
         if(mode === 'brush') { document.getElementById('tool-brush').classList.add('active'); canvas.isDrawingMode = true; canvas.freeDrawingBrush = new fabric.PencilBrush(canvas); canvas.freeDrawingBrush.color = document.getElementById('brush-color').value || '#000000'; canvas.freeDrawingBrush.width = parseInt(document.getElementById('brush-width').value) || 10; document.getElementById('brush-tool-name').innerText = "브러시"; }
         if(mode === 'dodge') { document.getElementById('tool-dodge').classList.add('active'); canvas.isDrawingMode = true; canvas.freeDrawingBrush = new fabric.PencilBrush(canvas); canvas.freeDrawingBrush.color = 'rgba(255, 255, 255, 0.15)'; canvas.freeDrawingBrush.width = 30; document.getElementById('brush-tool-name').innerText = "닷지(밝게)"; document.getElementById('brush-color').value = "#ffffff"; document.getElementById('brush-color-preview').style.backgroundColor = "#ffffff"; document.getElementById('brush-width').value = 30; }
         if(mode === 'ai-draw') { document.getElementById('tool-draw').classList.add('active'); canvas.isDrawingMode = true; canvas.freeDrawingBrush = new fabric.PencilBrush(canvas); canvas.freeDrawingBrush.color = 'rgba(255, 0, 0, 0.5)'; canvas.freeDrawingBrush.width = 20; document.getElementById('gen-fill-panel').classList.remove('hidden'); }
