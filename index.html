@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Editor - Pro (v1.63)</title>
+    <title>AI Image Editor - Pro (v1.65)</title>
     
     <!-- External Libraries (CDN) -->
     <!-- Tailwind CSS -->
@@ -316,7 +316,7 @@
         <div class="header-left">
             <div class="flex items-center gap-2">
                 <div class="w-5 h-5 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-[10px] font-bold shadow-lg">P</div>
-                <span class="text-xs font-bold text-gray-200 tracking-wide">Pro Editor <span class="text-[9px] text-gray-500 ml-1 font-normal" id="version-display">v1.63</span></span>
+                <span class="text-xs font-bold text-gray-200 tracking-wide">Pro Editor <span class="text-[9px] text-gray-500 ml-1 font-normal" id="version-display">v1.65</span></span>
             </div>
 
             <!-- Integrated Property Bar -->
@@ -491,6 +491,10 @@
                 <button class="prop-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)"><i data-lucide="undo-2" size="14"></i></button>
                 <button class="prop-btn" id="btn-redo" onclick="redo()" title="Redo (Ctrl+Y)"><i data-lucide="redo-2" size="14"></i></button>
             </div>
+            <!-- v1.65: 전체화면 버튼 (모바일 주소창 숨김 / 가로모드 공간 확보) -->
+            <button id="btn-fullscreen" class="bg-[#333] hover:bg-[#444] text-gray-300 px-2 py-1 rounded text-[11px] flex items-center gap-1 border border-[#555]" onclick="toggleFullscreen()" title="전체화면 (F11)">
+                <i data-lucide="maximize" size="14" id="fullscreen-icon"></i>
+            </button>
             <button id="btn-toggle-panel" class="bg-[#333] hover:bg-[#444] text-gray-300 px-2 py-1 rounded text-[11px] flex items-center gap-1 border border-[#555]" onclick="toggleRightPanel()" title="패널 접기/펼치기">
                 <i data-lucide="panel-right-close" size="14" id="panel-toggle-icon"></i>
             </button>
@@ -1109,6 +1113,7 @@
             <div class="flex justify-between py-0.5"><span class="text-gray-300">화면 패닝</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">Space + Drag</kbd></div>
             <div class="flex justify-between py-0.5"><span class="text-gray-300">마우스 휠 줌</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">Ctrl + Wheel</kbd></div>
             <div class="flex justify-between py-0.5"><span class="text-gray-300">화면 맞추기</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">Ctrl+0</kbd></div>
+            <div class="flex justify-between py-0.5"><span class="text-gray-300">전체화면 토글</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">F11</kbd></div>
             <div class="col-span-2 text-[10px] font-bold text-blue-400 mb-1 mt-2 border-b border-[#333] pb-1">자르기</div>
             <div class="flex justify-between py-0.5"><span class="text-gray-300">자르기 적용</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">Enter</kbd></div>
             <div class="flex justify-between py-0.5"><span class="text-gray-300">자르기 취소</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">ESC</kbd></div>
@@ -1149,7 +1154,7 @@
     function saveApiKey() { const input = document.getElementById('input-api-key').value.trim(); if (!input) { alert("API Key를 입력해주세요."); return; } apiKey = input; localStorage.setItem("gemini_api_key", apiKey); closeApiKeyModal(); alert("API Key가 저장되었습니다."); }
     function checkApiKey() { if (!apiKey) { openApiKeyModal(); return false; } return true; }
 
-    const APP_VERSION = "1.63"; 
+    const APP_VERSION = "1.65"; 
     document.getElementById('version-display').innerText = `v${APP_VERSION}`;
 
     const canvas = new fabric.Canvas('editor-canvas', { backgroundColor: 'transparent', preserveObjectStacking: true, selection: true });
@@ -1207,6 +1212,7 @@
         // v1.50: cropMode 체크
         if (cropMode) { if (e.key === 'Enter') { applyCrop(); e.preventDefault(); } if (e.key === 'Escape') { cancelCrop(); e.preventDefault(); } return; }
         if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); resetZoom(); }
+        if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
         if (e.key === '?' && !e.ctrlKey && !e.metaKey) { showShortcutsModal(); e.preventDefault(); }
         if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') { e.preventDefault(); redo(); }
@@ -1429,7 +1435,7 @@
         _wandMaskData = null;
     }
 
-    // 진입점: 연속 클릭 시 이전 작업 취소 후 재시작
+    // 진입점: Shift 추가 선택 지원, 연속 클릭 시 이전 작업 취소 후 재시작
     function performMagicWand(x, y, shiftAdd) {
         if (_wandRunning) {
             _wandAbortFlag = true;
@@ -1442,6 +1448,8 @@
     function _doMagicWand(x, y, shiftAdd) {
         _wandAbortFlag = false;
         _wandRunning   = true;
+
+        // Shift 추가 선택이 아닐 때만 이전 오버레이 제거
         if (!shiftAdd) _clearWandOverlay();
 
         const wandContiguous = document.getElementById('wand-contiguous').checked;
@@ -1508,7 +1516,7 @@
             return (dr*dr + dg*dg + db*db + da*da*0.25) <= tol*tol;
         }
 
-        // 5. Flood Fill - Scanline (무한루프 수정판)
+        // 5. Flood Fill - Scanline (무한루프 수정: queued 별도 추적)
         const newMask = new Uint8Array(W * H);
         const queued  = new Uint8Array(W * H);
         let selectedCount = 0;
@@ -1557,7 +1565,7 @@
             return;
         }
 
-        // 6. Shift 추가 선택: 이전 마스크와 OR 합성
+        // 6. Shift 추가 선택: 이전 마스크와 OR 합산
         let mask = newMask;
         if (shiftAdd && _wandMaskData && _wandMaskData.W === W && _wandMaskData.H === H) {
             const prev = _wandMaskData.mask;
@@ -1590,13 +1598,14 @@
 
         if (selectionShape) { canvas.remove(selectionShape); selectionShape = null; }
 
-        // 8. 오버레이 렌더링
+        // 8. 좌표 변환 헬퍼
         function pixelToCanvas(px, py) {
             const localX = (px / cssToProcX) - target.width  / 2;
             const localY = (py / cssToProcY) - target.height / 2;
             return fabric.util.transformPoint(new fabric.Point(localX, localY), transformMatrix);
         }
 
+        // 9. 오버레이 캔버스 생성/가져오기
         const overlayEl  = _getOrCreateWandOverlay();
         const overlayCtx = overlayEl.getContext('2d');
 
@@ -1615,50 +1624,36 @@
 
         const [a,b,c,d,e,f] = transformMatrix;
 
-        // ── 핵심: 외곽선만 별도 Canvas에 굵게 그리기 ────────────────
-        // 외곽 경계 픽셀 수집 (이미지 픽셀 공간)
+        // 10. 외곽선 세그먼트 수집
         function buildBorderSegments(step) {
             const segs = [];
             for (let py=0; py<H; py+=step) {
                 for (let px=0; px<W; px+=step) {
                     if (!mask[py*W+px]) continue;
                     const sx = Math.min(px+step, W), sy = Math.min(py+step, H);
-                    // 오른쪽 경계
-                    if (px+step>=W || !mask[py*W+Math.min(px+step,W-1)]) {
-                        segs.push([sx, py, sx, sy]);
-                    }
-                    // 왼쪽 경계
-                    if (px===0 || !mask[py*W+(px-step<0?0:px-step)]) {
-                        segs.push([px, py, px, sy]);
-                    }
-                    // 아래 경계
-                    if (py+step>=H || !mask[Math.min(py+step,H-1)*W+px]) {
-                        segs.push([px, sy, sx, sy]);
-                    }
-                    // 위 경계
-                    if (py===0 || !mask[(py-step<0?0:py-step)*W+px]) {
-                        segs.push([px, py, sx, py]);
-                    }
+                    if (px+step>=W || !mask[py*W+Math.min(px+step,W-1)]) segs.push([sx,py,sx,sy]);
+                    if (px===0   || !mask[py*W+Math.max(px-step,0)])      segs.push([px,py,px,sy]);
+                    if (py+step>=H || !mask[Math.min(py+step,H-1)*W+px])  segs.push([px,sy,sx,sy]);
+                    if (py===0   || !mask[Math.max(py-step,0)*W+px])      segs.push([px,py,sx,py]);
                 }
             }
             return segs;
         }
 
-        const useFull = (W*H) <= 600*600;
-        const step = useFull ? 1 : Math.max(2, Math.ceil(Math.max(W,H)/600));
+        const step = (W*H) <= 600*600 ? 1 : Math.max(2, Math.ceil(Math.max(W,H)/600));
         const borderSegs = buildBorderSegments(step);
 
+        // 11. 오버레이 그리기 함수 (Marching Ants 이중 점선)
         function drawOverlay(offset) {
             overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height);
 
-            // 1) 반투명 마스크 채우기
+            // 반투명 마스크 채우기
             overlayCtx.save();
             overlayCtx.transform(a/cssToProcX, b/cssToProcY, c/cssToProcX, d/cssToProcY, e, f);
             overlayCtx.drawImage(maskCanvas, -W/2, -H/2, W, H);
             overlayCtx.restore();
 
-            // 2) 외곽 점선 (흰색 + 파란색 이중 레이어 → 어떤 배경에도 잘 보임)
-            // 흰색 바탕선
+            // 흰색 바탕선 (2.5px)
             overlayCtx.save();
             overlayCtx.setLineDash([6, 4]);
             overlayCtx.lineDashOffset = -(offset || 0);
@@ -1667,19 +1662,20 @@
             overlayCtx.lineCap     = 'square';
             overlayCtx.beginPath();
             for (const [x0,y0,x1,y1] of borderSegs) {
-                const p0 = pixelToCanvas(x0, y0), p1 = pixelToCanvas(x1, y1);
-                overlayCtx.moveTo(p0.x, p0.y); overlayCtx.lineTo(p1.x, p1.y);
+                const p0 = pixelToCanvas(x0,y0), p1 = pixelToCanvas(x1,y1);
+                overlayCtx.moveTo(p0.x,p0.y); overlayCtx.lineTo(p1.x,p1.y);
             }
             overlayCtx.stroke();
-            // 파란 점선 (오프셋 반전)
+
+            // 파란 점선 (1.5px, 오프셋 반전 → 교차 애니메이션)
             overlayCtx.setLineDash([6, 4]);
-            overlayCtx.lineDashOffset = -((offset || 0) + 5);
-            overlayCtx.strokeStyle = 'rgba(0, 160, 255, 0.95)';
+            overlayCtx.lineDashOffset = -((offset||0) + 5);
+            overlayCtx.strokeStyle = 'rgba(0,160,255,0.95)';
             overlayCtx.lineWidth   = 1.5;
             overlayCtx.beginPath();
             for (const [x0,y0,x1,y1] of borderSegs) {
-                const p0 = pixelToCanvas(x0, y0), p1 = pixelToCanvas(x1, y1);
-                overlayCtx.moveTo(p0.x, p0.y); overlayCtx.lineTo(p1.x, p1.y);
+                const p0 = pixelToCanvas(x0,y0), p1 = pixelToCanvas(x1,y1);
+                overlayCtx.moveTo(p0.x,p0.y); overlayCtx.lineTo(p1.x,p1.y);
             }
             overlayCtx.stroke();
             overlayCtx.restore();
@@ -1687,7 +1683,7 @@
 
         drawOverlay(0);
 
-        // Marching Ants 애니메이션
+        // 12. Marching Ants 애니메이션
         if (_marchingTimer) clearInterval(_marchingTimer);
         _marchingOffset = 0;
         _marchingTimer = setInterval(() => {
@@ -1700,250 +1696,9 @@
         selectionMode = 'wand';
         _wandRunning  = false;
 
-        const addLabel = (shiftAdd && _wandMaskData) ? ' (추가)' : '';
-        showToast(`✨ ${selectedCount.toLocaleString()}픽셀 선택됨  톨러런스: ${magicWandTolerance}${addLabel}`);
-    }
-
-        const wandContiguous = document.getElementById('wand-contiguous').checked;
-        const wandAntiAlias  = document.getElementById('wand-anti-alias').checked;
-
-        // 1. 대상 이미지 찾기
-        let target = null;
-        const objects = canvas.getObjects();
-        for (let i = objects.length - 1; i >= 0; i--) {
-            if (objects[i].type === 'image' && objects[i].containsPoint(new fabric.Point(x, y))) {
-                target = objects[i]; break;
-            }
-        }
-        if (!target) {
-            _wandRunning = false;
-            showToast("이미지 레이어 위를 클릭해주세요");
-            return;
-        }
-
-        // 2. 원본 이미지 픽셀 취득 + 성능용 다운샘플 (최대 1500px)
-        const imgEl = target.getElement();
-        const natW  = imgEl.naturalWidth  || imgEl.width;
-        const natH  = imgEl.naturalHeight || imgEl.height;
-        const MAX_DIM   = 1500;
-        const downScale = Math.min(1, MAX_DIM / Math.max(natW, natH));
-        const procW     = Math.max(1, Math.round(natW * downScale));
-        const procH     = Math.max(1, Math.round(natH * downScale));
-
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width  = procW;
-        tempCanvas.height = procH;
-        const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
-        tempCtx.drawImage(imgEl, 0, 0, procW, procH);
-
-        // 3. 클릭 좌표 → 처리용 픽셀 좌표
-        const transformMatrix = target.calcTransformMatrix();
-        const invertedMatrix  = fabric.util.invertTransform(transformMatrix);
-        const localPt = fabric.util.transformPoint(new fabric.Point(x, y), invertedMatrix);
-
-        // fabric 로컬 좌표(CSS표시크기 기준) → 원본픽셀 → 처리픽셀
-        const cssToProcX = (natW / target.width)  * downScale;
-        const cssToProcY = (natH / target.height) * downScale;
-        const pixelX = Math.round((localPt.x + target.width  / 2) * cssToProcX);
-        const pixelY = Math.round((localPt.y + target.height / 2) * cssToProcY);
-
-        if (pixelX < 0 || pixelX >= procW || pixelY < 0 || pixelY >= procH) {
-            _wandRunning = false;
-            showToast("이미지 영역 밖입니다");
-            return;
-        }
-
-        // 4. 픽셀 데이터
-        const imageData = tempCtx.getImageData(0, 0, procW, procH);
-        const data = imageData.data;
-        const W = procW, H = procH;
-        const si = (pixelY * W + pixelX) * 4;
-        const tR = data[si], tG = data[si+1], tB = data[si+2], tA = data[si+3];
-        const tol = magicWandTolerance * 2.55;
-
-        function colorMatch(p4) {
-            const a = data[p4+3];
-            if (a === 0 && tA === 0) return true;
-            if (a === 0) return tol >= 255;
-            const dr = data[p4]-tR, dg = data[p4+1]-tG, db = data[p4+2]-tB, da = a-tA;
-            return (dr*dr + dg*dg + db*db + da*da*0.25) <= tol*tol;
-        }
-
-        // 5. Flood Fill - Scanline 방식 (v1.62 무한루프 수정)
-        //    핵심: push 전 mask[] 체크로 중복 push 원천 차단
-        const mask    = new Uint8Array(W * H);
-        const queued  = new Uint8Array(W * H);  // 스택에 들어간 적 있는지
-        let selectedCount = 0;
-
-        if (wandContiguous) {
-            const stack = [pixelY * W + pixelX];
-            queued[pixelY * W + pixelX] = 1;
-
-            while (stack.length > 0) {
-                if (_wandAbortFlag) { _wandRunning = false; return; }
-
-                const pos    = stack.pop();
-                const py     = (pos / W) | 0;
-                const pxSeed = pos % W;
-
-                // 이미 처리 완료된 픽셀이면 스킵
-                if (mask[py * W + pxSeed]) continue;
-                // 색상 불일치면 스킵
-                if (!colorMatch(pos * 4)) continue;
-
-                // 좌우 스캔라인 확장
-                let lx = pxSeed, rx = pxSeed;
-                while (lx > 0   && !mask[py*W+lx-1] && colorMatch((py*W+lx-1)*4)) lx--;
-                while (rx < W-1 && !mask[py*W+rx+1] && colorMatch((py*W+rx+1)*4)) rx++;
-
-                // 행 마킹 + 위/아래 행 시드 등록
-                for (let px = lx; px <= rx; px++) {
-                    if (mask[py*W+px]) continue;
-                    mask[py*W+px] = 1;
-                    selectedCount++;
-
-                    if (py > 0) {
-                        const up = (py-1)*W+px;
-                        if (!queued[up] && !mask[up] && colorMatch(up*4)) {
-                            queued[up] = 1; stack.push(up);
-                        }
-                    }
-                    if (py < H-1) {
-                        const dn = (py+1)*W+px;
-                        if (!queued[dn] && !mask[dn] && colorMatch(dn*4)) {
-                            queued[dn] = 1; stack.push(dn);
-                        }
-                    }
-                }
-            }
-        } else {
-            for (let pos = 0; pos < W*H; pos++) {
-                if (_wandAbortFlag) { _wandRunning = false; return; }
-                if (colorMatch(pos*4)) { mask[pos]=1; selectedCount++; }
-            }
-        }
-
-        if (_wandAbortFlag) { _wandRunning = false; return; }
-        if (selectedCount < 2) {
-            _wandRunning = false;
-            showToast("선택 영역이 너무 작습니다. 톨러런스를 높여보세요.");
-            return;
-        }
-
-        // 6. Anti-alias 알파 가중치 (마스크 자체는 건드리지 않음)
-        let aaWeight = null;
-        if (wandAntiAlias) {
-            aaWeight = new Float32Array(W*H);
-            for (let pos = 0; pos < W*H; pos++) {
-                if (!mask[pos]) continue;
-                const py=((pos/W)|0), px=(pos%W);
-                let border=0;
-                for (let dy=-1;dy<=1;dy++) for (let dx=-1;dx<=1;dx++) {
-                    if (!dx&&!dy) continue;
-                    const nx=px+dx, ny=py+dy;
-                    if (nx<0||nx>=W||ny<0||ny>=H) { border++; continue; }
-                    if (!mask[ny*W+nx]) border++;
-                }
-                aaWeight[pos] = Math.max(0.3, 1 - border*0.04);
-            }
-        }
-
-        // 7. 기존 선택 제거
-        if (selectionShape) { canvas.remove(selectionShape); selectionShape = null; }
-
-        // 8. 오버레이 렌더링
-        // 처리픽셀 → canvas좌표 변환 함수
-        function pixelToCanvas(px, py) {
-            const localX = (px / cssToProcX) - target.width  / 2;
-            const localY = (py / cssToProcY) - target.height / 2;
-            return fabric.util.transformPoint(new fabric.Point(localX, localY), transformMatrix);
-        }
-
-        const overlayEl  = _getOrCreateWandOverlay();
-        const overlayCtx = overlayEl.getContext('2d');
-
-        // 마스크 이미지 생성
-        const maskCanvas = document.createElement('canvas');
-        maskCanvas.width = W; maskCanvas.height = H;
-        const mCtx = maskCanvas.getContext('2d');
-        const mImg = mCtx.createImageData(W, H);
-        const mD   = mImg.data;
-        for (let pos = 0; pos < W*H; pos++) {
-            if (!mask[pos]) continue;
-            const alpha = aaWeight ? Math.round(aaWeight[pos]*90) : 90;
-            mD[pos*4]=0; mD[pos*4+1]=120; mD[pos*4+2]=215; mD[pos*4+3]=alpha;
-        }
-        mCtx.putImageData(mImg, 0, 0);
-
-        const [a,b,c,d,e,f] = transformMatrix;
-
-        function drawOverlay(offset) {
-            overlayCtx.clearRect(0, 0, overlayEl.width, overlayEl.height);
-
-            // 마스크 채우기
-            overlayCtx.save();
-            overlayCtx.transform(a/cssToProcX, b/cssToProcY, c/cssToProcX, d/cssToProcY, e, f);
-            overlayCtx.drawImage(maskCanvas, -W/2, -H/2, W, H);
-            overlayCtx.restore();
-
-            // 경계선
-            const useFull = (W*H) <= 700*700;
-            overlayCtx.save();
-            overlayCtx.setLineDash([6, 4]);
-            overlayCtx.lineDashOffset = -(offset||0);
-            overlayCtx.strokeStyle = '#00ccff';
-            overlayCtx.lineWidth   = 1.5;
-            overlayCtx.shadowColor = 'rgba(0,0,0,0.7)';
-            overlayCtx.shadowBlur  = 1;
-            overlayCtx.beginPath();
-
-            const stepY = useFull ? 1 : Math.ceil(H/400);
-            const stepX = useFull ? 1 : Math.ceil(W/400);
-            for (let py=0; py<H; py+=stepY) {
-                for (let px=0; px<W; px+=stepX) {
-                    if (!mask[py*W+px]) continue;
-                    if (px===W-1||!mask[py*W+px+stepX]) {
-                        const p0=pixelToCanvas(px+1,py),p1=pixelToCanvas(px+1,py+1);
-                        overlayCtx.moveTo(p0.x,p0.y); overlayCtx.lineTo(p1.x,p1.y);
-                    }
-                    if (px===0||!mask[py*W+(px-stepX<0?0:px-stepX)]) {
-                        const p0=pixelToCanvas(px,py),p1=pixelToCanvas(px,py+1);
-                        overlayCtx.moveTo(p0.x,p0.y); overlayCtx.lineTo(p1.x,p1.y);
-                    }
-                    if (py===H-1||!mask[(py+stepY>=H?H-1:py+stepY)*W+px]) {
-                        const p0=pixelToCanvas(px,py+1),p1=pixelToCanvas(px+1,py+1);
-                        overlayCtx.moveTo(p0.x,p0.y); overlayCtx.lineTo(p1.x,p1.y);
-                    }
-                    if (py===0||!mask[(py-stepY<0?0:py-stepY)*W+px]) {
-                        const p0=pixelToCanvas(px,py),p1=pixelToCanvas(px+1,py);
-                        overlayCtx.moveTo(p0.x,p0.y); overlayCtx.lineTo(p1.x,p1.y);
-                    }
-                }
-            }
-            overlayCtx.stroke();
-            overlayCtx.restore();
-        }
-
-        drawOverlay(0);
-
-        // Marching Ants 애니메이션 (작은 이미지만)
-        if (W*H <= 700*700) {
-            _marchingOffset = 0;
-            _marchingTimer = setInterval(() => {
-                if (_wandAbortFlag) { clearInterval(_marchingTimer); _marchingTimer=null; return; }
-                _marchingOffset = (_marchingOffset+1) % 10;
-                drawOverlay(_marchingOffset);
-            }, 80);
-        }
-
-        _wandMaskData = { mask, W, H, target, cssToProcX, cssToProcY, downScale };
-        selectionMode = 'wand';
-        _wandRunning  = false;
-
         const addLabel = shiftAdd ? ' (추가)' : '';
         showToast(`✨ ${selectedCount.toLocaleString()}픽셀 선택됨  톨러런스: ${magicWandTolerance}${addLabel}`);
     }
-
 
     function saveSelectedObject() { const activeObj = canvas.getActiveObject(); if (!activeObj) return alert("선택된 객체가 없습니다."); const dataURL = activeObj.toDataURL({ format: 'png', multiplier: 2 }); const a = document.createElement('a'); a.href = dataURL; a.download = `selected_layer_${Date.now()}.png`; a.click(); hideContextMenu(); }
     function bringToFront() { const a = canvas.getActiveObject(); if(a) { canvas.bringToFront(a); updateLayers(); saveHistory("Bring Front"); } hideContextMenu(); }
@@ -2036,6 +1791,41 @@
     function fitCanvas() { const container = document.querySelector('.canvas-area'); panX = 0; panY = 0; const scaleX = (container.clientWidth - 100) / canvas.width; const scaleY = (container.clientHeight - 100) / canvas.height; const scale = Math.min(scaleX, scaleY, 1); setZoom(Math.max(scale, 0.1)); }
     function setZoom(val) { currentZoom = parseFloat(val); updateCanvasTransform(); }
     function adjustZoom(delta) { let newZoom = currentZoom + delta; setZoom(Math.max(0.1, Math.min(newZoom, 10))); }
+
+    // v1.65: 전체화면 토글 (스마트폰 주소창/탭바 숨김, 가로모드 공간 확보)
+    function toggleFullscreen() {
+        const icon = document.getElementById('fullscreen-icon');
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            const el = document.documentElement;
+            const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+            if (req) {
+                req.call(el).then(() => {
+                    if (icon) { icon.setAttribute('data-lucide','minimize'); safeCreateIcons(); }
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(()=>{});
+                    }
+                }).catch(() => showToast('전체화면을 지원하지 않는 브라우저입니다'));
+            } else {
+                showToast('전체화면을 지원하지 않는 브라우저입니다');
+            }
+        } else {
+            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+            if (exit) exit.call(document);
+            if (icon) { icon.setAttribute('data-lucide','maximize'); safeCreateIcons(); }
+        }
+    }
+    document.addEventListener('fullscreenchange', () => {
+        const icon = document.getElementById('fullscreen-icon');
+        if (!icon) return;
+        icon.setAttribute('data-lucide', document.fullscreenElement ? 'minimize' : 'maximize');
+        safeCreateIcons();
+    });
+    document.addEventListener('webkitfullscreenchange', () => {
+        const icon = document.getElementById('fullscreen-icon');
+        if (!icon) return;
+        icon.setAttribute('data-lucide', document.webkitFullscreenElement ? 'minimize' : 'maximize');
+        safeCreateIcons();
+    });
     function resetZoom() { fitCanvas(); }
     window.addEventListener('resize', fitCanvas);
     
@@ -2408,28 +2198,23 @@
     function setBlendMode(mode) { const o = canvas.getActiveObject(); if(o) { o.set('globalCompositeOperation', mode); canvas.requestRenderAll(); saveHistory("Blend Mode"); } }
 
     function toggleFilterPanel() { const panel = document.getElementById('filter-panel'); panel.style.display = panel.style.display === 'block' ? 'none' : 'block'; }
-    // v1.63: 필터 적용 헬퍼 – Fabric.js 5.x Convolute 버그 완전 수정
-    // 근본 원인: applyFilters() 후 내부 _element 교체 시 obj.width/height 자체가 바뀜
-    //           → scaleX/Y 복원만으론 부족, width/height 기반 scaleX 재계산 필요
+
+    // v1.65: 필터 안전 적용 헬퍼 ─ Fabric.js 5.x Convolute 버그 완전 수정
+    // 근본 원인: applyFilters() 후 내부 _element 교체 시 obj.width/height 자체가 변함
+    //           scaleX/Y 복원만으론 부족 → 화면 표시 크기(px) 기준으로 scale 재계산
     function _safeApplyFilters(obj) {
-        // 필터 적용 전 "화면 표시 크기(px)" 저장
-        const dispW = obj.width  * obj.scaleX;
-        const dispH = obj.height * obj.scaleY;
-        const prevL = obj.left,  prevT = obj.top;
-        const prevAngle = obj.angle;
-
+        const dispW  = obj.width  * obj.scaleX;
+        const dispH  = obj.height * obj.scaleY;
+        const prevL  = obj.left,  prevT  = obj.top;
+        const prevAng = obj.angle;
         obj.applyFilters();
-
-        // 적용 후 width/height가 바뀌었으면 scaleX/Y를 재계산하여 표시 크기 복원
-        const newDispW = obj.width  * obj.scaleX;
-        const newDispH = obj.height * obj.scaleY;
-        if (Math.abs(newDispW - dispW) > 0.5 || Math.abs(newDispH - dispH) > 0.5) {
+        // 적용 후 표시 크기가 바뀌었으면 scale을 재역산하여 복원
+        if (Math.abs(obj.width * obj.scaleX - dispW) > 0.5 ||
+            Math.abs(obj.height * obj.scaleY - dispH) > 0.5) {
             obj.set({
                 scaleX: dispW / obj.width,
                 scaleY: dispH / obj.height,
-                left:   prevL,
-                top:    prevT,
-                angle:  prevAngle
+                left: prevL, top: prevT, angle: prevAng
             });
             obj.setCoords();
         }
@@ -3030,7 +2815,7 @@
         document.getElementById('shortcuts-modal').classList.add('flex');
         safeCreateIcons();
     }
-    function showAppInfo() { alert(`Pro Editor v${APP_VERSION}\nBuild: ${new Date().toLocaleDateString()}\n\n✅ v1.60 변경사항:\n- modal-overlay CSS 버그 수정\n- 히스토리 오염 버그 수정\n- 토스트 타이머 충돌 수정\n- Ctrl+Wheel 줌 추가\n- Ctrl+Shift+Z 다시 실행 추가\n- 프로젝트 저장/로드 캔버스 크기 복원\n- 레이어 이름 한국어 표시\n- 단축키 안내 모달 추가\n- History 50개로 확장\n- 최대 줌 10x로 확장`); }
+    function showAppInfo() { alert(`Pro Editor v${APP_VERSION}\nBuild: ${new Date().toLocaleDateString()}\n\n✅ v1.65 변경사항:\n- 전체화면 버튼 추가 (F11, 모바일 주소창 숨김)\n- 필터 보정 1/4 잘림 버그 완전 수정\n- 매직봉 외곽 이중 점선 (흰+파랑 Marching Ants)\n- Shift+매직봉: 선택 영역 누적 추가\n\n✅ v1.62 기반:\n- 매직봉 Flood Fill 무한루프 버그 수정\n- Convolute 필터 크기 버그 수정 (opaque:false)\n- lucide 아이콘 타이밍 오류 방지 (safeCreateIcons)`); }
     
     // v1.47: 오른쪽 패널 접기/펼치기
     let isRightPanelCollapsed = false;
