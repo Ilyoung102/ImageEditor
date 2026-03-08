@@ -9,7 +9,13 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lucide: latest 유지 (safeCreateIcons 래퍼로 타이밍 오류 방어) -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.454.0/dist/umd/lucide.min.js"></script>
+    <script>
+        // lucide 로드 실패 시 unpkg fallback
+        if (typeof lucide === 'undefined') {
+            document.write('<scr'+'ipt src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js"><\/scr'+'ipt>');
+        }
+    </script>
     <!-- Fabric.js with Filters Support -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
@@ -1134,9 +1140,18 @@
 <script>
     // ── lucide 안전 래퍼 (스크립트 로딩 타이밍 불일치 방지) ──────────────
     function safeCreateIcons() {
-        try { if (typeof lucide !== 'undefined') lucide.createIcons(); } catch(e) {}
+        try { 
+            if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+                lucide.createIcons();
+            }
+        } catch(e) { console.warn('lucide.createIcons error:', e); }
     }
+    // 즉시 시도 + DOM 완료 후 재시도 (로딩 타이밍 문제 완전 방어)
     safeCreateIcons();
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => safeCreateIcons());
+    }
+    window.addEventListener('load', () => safeCreateIcons());
     let apiKey = localStorage.getItem("gemini_api_key") || "";
 
     // Set worker source for PDF.js
