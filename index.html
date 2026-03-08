@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Editor - Pro (v1.64)</title>
+    <title>AI Image Editor - Pro (v1.63)</title>
     
     <!-- External Libraries (CDN) -->
     <!-- Tailwind CSS -->
@@ -316,7 +316,7 @@
         <div class="header-left">
             <div class="flex items-center gap-2">
                 <div class="w-5 h-5 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white text-[10px] font-bold shadow-lg">P</div>
-                <span class="text-xs font-bold text-gray-200 tracking-wide">Pro Editor <span class="text-[9px] text-gray-500 ml-1 font-normal" id="version-display">v1.64</span></span>
+                <span class="text-xs font-bold text-gray-200 tracking-wide">Pro Editor <span class="text-[9px] text-gray-500 ml-1 font-normal" id="version-display">v1.63</span></span>
             </div>
 
             <!-- Integrated Property Bar -->
@@ -491,10 +491,6 @@
                 <button class="prop-btn" id="btn-undo" onclick="undo()" title="Undo (Ctrl+Z)"><i data-lucide="undo-2" size="14"></i></button>
                 <button class="prop-btn" id="btn-redo" onclick="redo()" title="Redo (Ctrl+Y)"><i data-lucide="redo-2" size="14"></i></button>
             </div>
-            <!-- v1.64: 전체화면 버튼 (모바일 주소창 숨김용) -->
-            <button id="btn-fullscreen" class="bg-[#333] hover:bg-[#444] text-gray-300 px-2 py-1 rounded text-[11px] flex items-center gap-1 border border-[#555]" onclick="toggleFullscreen()" title="전체화면 (F11)">
-                <i data-lucide="maximize" size="14" id="fullscreen-icon"></i>
-            </button>
             <button id="btn-toggle-panel" class="bg-[#333] hover:bg-[#444] text-gray-300 px-2 py-1 rounded text-[11px] flex items-center gap-1 border border-[#555]" onclick="toggleRightPanel()" title="패널 접기/펼치기">
                 <i data-lucide="panel-right-close" size="14" id="panel-toggle-icon"></i>
             </button>
@@ -1113,7 +1109,6 @@
             <div class="flex justify-between py-0.5"><span class="text-gray-300">화면 패닝</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">Space + Drag</kbd></div>
             <div class="flex justify-between py-0.5"><span class="text-gray-300">마우스 휠 줌</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">Ctrl + Wheel</kbd></div>
             <div class="flex justify-between py-0.5"><span class="text-gray-300">화면 맞추기</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">Ctrl+0</kbd></div>
-            <div class="flex justify-between py-0.5"><span class="text-gray-300">전체화면 토글</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">F11</kbd></div>
             <div class="col-span-2 text-[10px] font-bold text-blue-400 mb-1 mt-2 border-b border-[#333] pb-1">자르기</div>
             <div class="flex justify-between py-0.5"><span class="text-gray-300">자르기 적용</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">Enter</kbd></div>
             <div class="flex justify-between py-0.5"><span class="text-gray-300">자르기 취소</span><kbd class="text-gray-500 bg-[#333] px-1 rounded">ESC</kbd></div>
@@ -1154,7 +1149,7 @@
     function saveApiKey() { const input = document.getElementById('input-api-key').value.trim(); if (!input) { alert("API Key를 입력해주세요."); return; } apiKey = input; localStorage.setItem("gemini_api_key", apiKey); closeApiKeyModal(); alert("API Key가 저장되었습니다."); }
     function checkApiKey() { if (!apiKey) { openApiKeyModal(); return false; } return true; }
 
-    const APP_VERSION = "1.64"; 
+    const APP_VERSION = "1.63"; 
     document.getElementById('version-display').innerText = `v${APP_VERSION}`;
 
     const canvas = new fabric.Canvas('editor-canvas', { backgroundColor: 'transparent', preserveObjectStacking: true, selection: true });
@@ -1212,7 +1207,6 @@
         // v1.50: cropMode 체크
         if (cropMode) { if (e.key === 'Enter') { applyCrop(); e.preventDefault(); } if (e.key === 'Escape') { cancelCrop(); e.preventDefault(); } return; }
         if ((e.ctrlKey || e.metaKey) && e.key === '0') { e.preventDefault(); resetZoom(); }
-        if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
         if (e.key === '?' && !e.ctrlKey && !e.metaKey) { showShortcutsModal(); e.preventDefault(); }
         if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') { e.preventDefault(); redo(); }
@@ -2042,51 +2036,6 @@
     function fitCanvas() { const container = document.querySelector('.canvas-area'); panX = 0; panY = 0; const scaleX = (container.clientWidth - 100) / canvas.width; const scaleY = (container.clientHeight - 100) / canvas.height; const scale = Math.min(scaleX, scaleY, 1); setZoom(Math.max(scale, 0.1)); }
     function setZoom(val) { currentZoom = parseFloat(val); updateCanvasTransform(); }
     function adjustZoom(delta) { let newZoom = currentZoom + delta; setZoom(Math.max(0.1, Math.min(newZoom, 10))); }
-
-    // v1.64: 전체화면 토글 (스마트폰 주소창/탭바 숨김)
-    function toggleFullscreen() {
-        const icon = document.getElementById('fullscreen-icon');
-        if (!document.fullscreenElement) {
-            // 전체화면 진입
-            const el = document.documentElement;
-            const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-            if (req) {
-                req.call(el).then(() => {
-                    if (icon) { icon.setAttribute('data-lucide','minimize'); safeCreateIcons(); }
-                    // 스크린 방향 고정 (가로) – 지원 브라우저만
-                    if (screen.orientation && screen.orientation.lock) {
-                        screen.orientation.lock('landscape').catch(()=>{});
-                    }
-                }).catch(() => {
-                    showToast('전체화면을 지원하지 않는 브라우저입니다');
-                });
-            } else {
-                showToast('전체화면을 지원하지 않는 브라우저입니다');
-            }
-        } else {
-            // 전체화면 해제
-            const exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
-            if (exit) exit.call(document);
-            if (icon) { icon.setAttribute('data-lucide','maximize'); safeCreateIcons(); }
-        }
-    }
-    // 전체화면 상태 변경 감지 (ESC 키 등)
-    document.addEventListener('fullscreenchange', () => {
-        const icon = document.getElementById('fullscreen-icon');
-        if (!icon) return;
-        if (document.fullscreenElement) {
-            icon.setAttribute('data-lucide','minimize');
-        } else {
-            icon.setAttribute('data-lucide','maximize');
-        }
-        safeCreateIcons();
-    });
-    document.addEventListener('webkitfullscreenchange', () => {
-        const icon = document.getElementById('fullscreen-icon');
-        if (!icon) return;
-        icon.setAttribute('data-lucide', document.webkitFullscreenElement ? 'minimize' : 'maximize');
-        safeCreateIcons();
-    });
     function resetZoom() { fitCanvas(); }
     window.addEventListener('resize', fitCanvas);
     
@@ -3081,7 +3030,7 @@
         document.getElementById('shortcuts-modal').classList.add('flex');
         safeCreateIcons();
     }
-    function showAppInfo() { alert(`Pro Editor v${APP_VERSION}\nBuild: ${new Date().toLocaleDateString()}\n\n✅ v1.64 변경사항:\n- 전체화면 버튼 추가 (모바일 주소창 숨김)\n- 필터 보정 1/4 잘림 버그 완전 수정\n- 매직봉 외곽 이중 점선 (흰+파랑)\n- Shift+매직봉: 선택 영역 추가\n\n✅ v1.63:\n- 매직봉 Scanline flood fill 무한루프 수정\n- 연속 클릭 시 이전 작업 즉시 취소 후 재시작`); }
+    function showAppInfo() { alert(`Pro Editor v${APP_VERSION}\nBuild: ${new Date().toLocaleDateString()}\n\n✅ v1.60 변경사항:\n- modal-overlay CSS 버그 수정\n- 히스토리 오염 버그 수정\n- 토스트 타이머 충돌 수정\n- Ctrl+Wheel 줌 추가\n- Ctrl+Shift+Z 다시 실행 추가\n- 프로젝트 저장/로드 캔버스 크기 복원\n- 레이어 이름 한국어 표시\n- 단축키 안내 모달 추가\n- History 50개로 확장\n- 최대 줌 10x로 확장`); }
     
     // v1.47: 오른쪽 패널 접기/펼치기
     let isRightPanelCollapsed = false;
