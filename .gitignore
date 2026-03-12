@@ -1,0 +1,18 @@
+# API Keys and Secrets
+.env
+*.local
+gemini_api_key.txt
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+.DS_Store
+
+# Temporary files
+tmp/
+temp/
