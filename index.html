@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Image Editor - Pro (v1.66)</title>
+    <title>AI Image Editor - Pro (v1.67)</title>
     
     <!-- External Libraries (CDN) -->
     <!-- Tailwind CSS -->
@@ -185,8 +185,9 @@
 
         /* Toast Notification */
         #toast {
-            visibility: hidden; min-width: 200px; background-color: #333; color: #fff; text-align: center; border-radius: 4px; padding: 10px;
+            visibility: hidden; min-width: 240px; max-width: 380px; background-color: #333; color: #fff; text-align: center; border-radius: 6px; padding: 10px 14px;
             position: fixed; z-index: 1000; left: 50%; bottom: 30px; transform: translateX(-50%); font-size: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); border: 1px solid #555;
+            white-space: pre-line; line-height: 1.5; word-break: break-word;
         }
         #toast.show { visibility: visible; animation: fadein 0.5s, fadeout 0.5s 2.5s; }
         @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
@@ -213,9 +214,9 @@
             background: #262626; z-index: 20; border-top: 1px solid #1f1f1f; flex-direction: column; 
         }
         #history-list-container.open { display: flex; }
-        .history-item { padding: 8px 12px; font-size: 11px; color: #aaa; cursor: pointer; border-bottom: 1px solid #1f1f1f; transition: all 0.2s; border-left: 3px solid transparent; }
-        .history-item:hover { background: #333; color: white; border-left: 3px solid #555; }
-        .history-item.active { color: #4facfe; font-weight: bold; background: #2d2d2d; border-left: 3px solid #4facfe; }
+        .history-item { padding: 6px 10px; font-size: 10px; color: #aaa; cursor: pointer; border-bottom: 1px solid #333; }
+        .history-item:hover { background: #333; color: white; }
+        .history-item.active { color: #4facfe; font-weight: bold; }
 
         .status-bar { background: #262626; border-top: 1px solid #1f1f1f; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; font-size: 10px; color: #888; z-index: 50; }
         .spinner { width: 24px; height: 24px; border: 3px solid #333; border-top: 3px solid #4facfe; border-radius: 50%; animation: spin 1s linear infinite; }
@@ -747,7 +748,8 @@
                     <span id="zoom-display" class="text-xs font-mono w-10 text-center text-gray-300 select-none">100%</span>
                     <div class="zoom-icon-btn" onclick="adjustZoom(0.1)" title="Zoom In"><i data-lucide="plus" size="16"></i></div>
                     <div class="w-px h-4 bg-gray-600 mx-1"></div>
-                    <div class="zoom-icon-btn" onclick="resetZoom()" title="Fit Screen"><i data-lucide="maximize" size="14"></i></div>
+                    <div class="zoom-icon-btn" onclick="resetZoom()" title="화면에 맞추기"><i data-lucide="maximize" size="14"></i></div>
+                    <div class="zoom-icon-btn" onclick="centerObjectsOnCanvas()" title="이미지를 캔버스 중앙으로 이동"><i data-lucide="focus" size="14"></i></div>
                 </div>
             </div>
         </div>
@@ -1093,28 +1095,7 @@
 <!-- AI Modals -->
 <div id="sticker-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center backdrop-blur-sm"><div class="bg-[#1e1e1e] w-[280px] rounded-lg border border-[#333] p-4"><h3 class="text-xs text-white mb-2 font-bold">AI Sticker (Imagen 3) ✨</h3><textarea id="sticker-prompt" class="w-full bg-[#121212] text-[11px] text-white p-2 border border-[#333] h-16 mb-2 rounded" placeholder="생성할 스티커 설명 (예: 귀여운 고양이 로고)"></textarea><div class="flex justify-end gap-2"><button onclick="document.getElementById('sticker-modal').classList.add('hidden')" class="text-[10px] text-gray-400">취소</button><button onclick="generateSticker()" class="text-[10px] bg-blue-500 text-white px-3 py-1 rounded">생성</button></div></div></div>
 <div id="style-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center backdrop-blur-sm"><div class="bg-[#1e1e1e] w-[280px] rounded-lg border border-[#333] p-4"><h3 class="text-xs text-white mb-2 font-bold">AI Style / Edit ✨</h3><textarea id="style-prompt" class="w-full bg-[#121212] text-[11px] text-white p-2 border border-[#333] h-16 mb-2 rounded" placeholder="변경할 스타일이나 효과 설명..."></textarea><div class="flex justify-end gap-2"><button onclick="document.getElementById('style-modal').classList.add('hidden')" class="text-[10px] text-gray-400">취소</button><button onclick="runStyle()" class="text-[10px] bg-purple-500 text-white px-3 py-1 rounded">적용</button></div></div></div>
-<div id="chat-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center backdrop-blur-sm">
-    <div class="bg-[#1e1e1e] w-[320px] h-[450px] rounded-lg border border-[#333] flex flex-col shadow-2xl">
-        <div class="p-3 border-b border-[#333] flex justify-between items-center bg-[#2b2b2b] rounded-t-lg">
-            <div class="flex items-center gap-2">
-                <i data-lucide="sparkles" size="14" class="text-[#4facfe]"></i>
-                <span class="text-xs text-white font-bold">AI Tutor</span>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="clearChat()" class="text-gray-400 hover:text-white" title="새 채팅"><i data-lucide="plus" size="14"></i></button>
-                <button onclick="document.getElementById('chat-modal').classList.add('hidden')" class="text-gray-400 hover:text-white"><i data-lucide="x" size="14"></i></button>
-            </div>
-        </div>
-        <div id="chat-history" class="flex-1 p-3 text-[11px] overflow-y-auto space-y-3 bg-[#121212]">
-            <div class="text-left text-gray-400 mb-2"><span class="bg-[#262626] px-3 py-2 rounded-lg inline-block border border-[#333]">안녕하세요! 이미지 에디터 AI 튜터입니다. 궁금한 점을 물어보세요. ✨</span></div>
-        </div>
-        <div class="p-3 border-t border-[#333] flex gap-2 bg-[#1e1e1e]">
-            <button onclick="saveChat()" class="text-gray-400 hover:text-white flex-shrink-0" title="채팅 저장"><i data-lucide="save" size="16"></i></button>
-            <input id="chat-input" class="flex-1 bg-[#121212] border border-[#333] rounded-md text-[11px] px-3 py-1.5 outline-none focus:border-[#4facfe] transition-colors" placeholder="AI에게 물어보기..." onkeypress="if(event.key==='Enter') sendChat()">
-            <button onclick="sendChat()" class="bg-[#4facfe] text-black px-3 py-1.5 rounded-md text-[11px] font-bold hover:bg-blue-400 transition-colors">Send</button>
-        </div>
-    </div>
-</div>
+<div id="chat-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center backdrop-blur-sm"><div class="bg-[#1e1e1e] w-[300px] h-[400px] rounded-lg border border-[#333] flex flex-col"><div class="p-2 border-b border-[#333] flex justify-between"><span class="text-xs text-white font-bold">Ask AI Tutor ✨</span><button onclick="document.getElementById('chat-modal').classList.add('hidden')" class="text-gray-400 text-xs">X</button></div><div id="chat-history" class="flex-1 p-2 text-[10px] overflow-y-auto space-y-2"></div><div class="p-2 border-t border-[#333] flex gap-1"><input id="chat-input" class="flex-1 bg-[#121212] border border-[#333] rounded text-[10px] px-1" onkeypress="if(event.key==='Enter') sendChat()"><button onclick="sendChat()" class="bg-[#4facfe] text-black px-2 py-1 rounded text-[10px]">Send</button></div></div></div>
 <div id="analysis-report-modal" class="fixed inset-0 bg-black/80 z-[100] hidden flex items-center justify-center backdrop-blur-sm"><div class="bg-[#1e1e1e] w-[300px] max-h-[70vh] rounded-lg border border-[#333] flex flex-col"><div class="p-3 border-b border-[#333] flex justify-between"><span class="text-xs text-white font-bold">AI Analysis Report ✨</span><button onclick="document.getElementById('analysis-report-modal').classList.add('hidden')" class="text-gray-400 text-xs">X</button></div><div class="p-3 text-[10px] overflow-y-auto space-y-2"><div id="analysis-loading" class="text-center text-gray-400">Analyzing Image...</div><div id="analysis-results" class="hidden space-y-2"><div class="bg-[#252525] p-2 rounded"><h4 class="text-blue-400 font-bold">Caption</h4><p id="report-caption" class="text-gray-300"></p></div><div class="bg-[#252525] p-2 rounded"><h4 class="text-purple-400 font-bold">Mood & Style</h4><p id="report-mood" class="text-gray-300"></p></div></div></div></div></div>
 
 <input type="file" id="load-project-input" class="hidden" accept=".json">
@@ -1181,12 +1162,6 @@
         document.addEventListener('DOMContentLoaded', () => safeCreateIcons());
     }
     window.addEventListener('load', () => safeCreateIcons());
-    
-    /**
-     * SECURITY WARNING: 
-     * Do NOT hardcode your API key here. The application uses localStorage to store keys.
-     * Hardcoding keys in source files can lead to accidental exposure when committed to public repositories.
-     */
     let apiKey = localStorage.getItem("gemini_api_key") || "";
 
     // Set worker source for PDF.js
@@ -1204,7 +1179,7 @@
     function saveApiKey() { const input = document.getElementById('input-api-key').value.trim(); if (!input) { alert("API Key를 입력해주세요."); return; } apiKey = input; localStorage.setItem("gemini_api_key", apiKey); closeApiKeyModal(); alert("API Key가 저장되었습니다."); }
     function checkApiKey() { if (!apiKey) { openApiKeyModal(); return false; } return true; }
 
-    const APP_VERSION = "1.66"; 
+    const APP_VERSION = "1.67"; 
     document.getElementById('version-display').innerText = `v${APP_VERSION}`;
 
     const canvas = new fabric.Canvas('editor-canvas', { backgroundColor: 'transparent', preserveObjectStacking: true, selection: true });
@@ -1842,6 +1817,37 @@
     function setZoom(val) { currentZoom = parseFloat(val); updateCanvasTransform(); }
     function adjustZoom(delta) { let newZoom = currentZoom + delta; setZoom(Math.max(0.1, Math.min(newZoom, 10))); }
 
+    // v1.67: 선택된 이미지(또는 전체 오브젝트)를 캔버스 중앙으로 이동
+    function centerObjectsOnCanvas() {
+        const objects = canvas.getObjects();
+        if (objects.length === 0) { showToast('캔버스에 이미지가 없습니다.'); return; }
+
+        const activeObj = canvas.getActiveObject();
+        if (activeObj) {
+            // 선택된 오브젝트만 캔버스 정중앙으로
+            activeObj.set({ left: canvas.width / 2, top: canvas.height / 2, originX: 'center', originY: 'center' });
+            activeObj.setCoords();
+            canvas.requestRenderAll();
+            saveHistory("Center Object");
+            showToast('선택된 오브젝트를 캔버스 중앙으로 이동했습니다.');
+        } else {
+            // 선택 없으면 전체 오브젝트들을 그룹으로 묶어 중앙 기준 이동
+            canvas.discardActiveObject();
+            const group = new fabric.Group(objects.map(o => o));
+            const groupCX = group.left + group.width / 2;
+            const groupCY = group.top + group.height / 2;
+            const dx = canvas.width / 2 - groupCX;
+            const dy = canvas.height / 2 - groupCY;
+            objects.forEach(o => {
+                o.set({ left: (o.left || 0) + dx, top: (o.top || 0) + dy });
+                o.setCoords();
+            });
+            canvas.requestRenderAll();
+            saveHistory("Center All Objects");
+            showToast('전체 오브젝트를 캔버스 중앙으로 이동했습니다.');
+        }
+    }
+
     // v1.65: 전체화면 토글 (스마트폰 주소창/탭바 숨김, 가로모드 공간 확보)
     function toggleFullscreen() {
         const icon = document.getElementById('fullscreen-icon');
@@ -1891,21 +1897,45 @@
     setTimeout(() => { init(); }, 100);
 
     document.body.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
-    document.body.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); if(e.dataTransfer.files[0]) { 
-        if (e.dataTransfer.files[0].type === 'application/pdf') {
-            handlePdfUpload(e.dataTransfer.files[0]);
-        } else {
-            handleImageAddToCanvas(e.dataTransfer.files[0]); 
+    document.body.addEventListener('drop', e => {
+        e.preventDefault(); e.stopPropagation();
+        const file = e.dataTransfer.files[0];
+        if (!file) return;
+        const isPdf = file.type === 'application/pdf';
+        const isImage = file.type.startsWith('image/');
+        if (!isPdf && !isImage) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            showToast(`⚠️ 지원하지 않는 파일 형식입니다 (.${ext})\n이미지 또는 PDF 파일을 드래그하세요.`);
+            return;
         }
-    } });
+        if (isPdf) { handlePdfUpload(file); } else { handleImageAddToCanvas(file); }
+    });
     
     document.getElementById('file-input').addEventListener('change', e => { 
-        if(e.target.files[0]) {
-            if (e.target.files[0].type === 'application/pdf') {
-                handlePdfUpload(e.target.files[0]);
-            } else {
-                handleImageUpload(e.target.files[0]);
-            }
+        const file = e.target.files[0];
+        e.target.value = ''; // 동일 파일 재선택 허용
+        if (!file) return;
+
+        const SUPPORTED_IMAGE_TYPES = ['image/jpeg','image/jpg','image/png','image/gif','image/webp','image/bmp','image/svg+xml','image/tiff','image/avif','image/heic','image/heif'];
+        const isPdf = file.type === 'application/pdf';
+        const isImage = SUPPORTED_IMAGE_TYPES.includes(file.type) || file.type.startsWith('image/');
+
+        if (!isPdf && !isImage) {
+            const ext = file.name.split('.').pop().toLowerCase();
+            showToast(`⚠️ 지원하지 않는 파일 형식입니다 (.${ext})\n이미지(PNG·JPG·WEBP 등) 또는 PDF 파일을 선택하세요.`);
+            return;
+        }
+
+        const MAX_MB = 60;
+        if (file.size > MAX_MB * 1024 * 1024) {
+            showToast(`⚠️ 파일이 너무 큽니다 (${(file.size/1024/1024).toFixed(1)}MB)\n${MAX_MB}MB 이하 파일을 사용하세요.`);
+            return;
+        }
+
+        if (isPdf) {
+            handlePdfUpload(file);
+        } else {
+            handleImageUpload(file);
         }
     });
 
@@ -1948,8 +1978,77 @@
         e.target.value = ''; // reset for re-load
     });
 
-    function handleImageUpload(file) { if(!file.type.startsWith('image/')) return; const reader = new FileReader(); reader.onload = (e) => { fabric.Image.fromURL(e.target.result, (img) => { createProject(file.name, img.width, img.height, 'transparent', img); }); }; reader.readAsDataURL(file); }
-    function handleImageAddToCanvas(file) { if(!file.type.startsWith('image/')) return; const reader = new FileReader(); reader.onload = (e) => { fabric.Image.fromURL(e.target.result, (img) => { if(img.width > canvas.width) img.scaleToWidth(canvas.width * 0.8); img.set({ left: canvas.width/2, top: canvas.height/2, originX: 'center', originY: 'center' }); canvas.add(img); canvas.setActiveObject(img); updateLayers(); saveHistory("Add Image Layer"); }); }; reader.readAsDataURL(file); }
+    function handleImageUpload(file) {
+        if (!file.type.startsWith('image/')) {
+            showToast('⚠️ 이미지 파일이 아닙니다.');
+            return;
+        }
+        showLoading(true, '이미지 로딩 중...');
+        const reader = new FileReader();
+        reader.onerror = () => {
+            showLoading(false);
+            showToast('⚠️ 파일을 읽는 중 오류가 발생했습니다. 파일이 손상되었거나 접근할 수 없습니다.');
+        };
+        reader.onload = (e) => {
+            const url = e.target.result;
+            // 이미지 로드 유효성 사전 확인
+            const testImg = new Image();
+            testImg.onerror = () => {
+                showLoading(false);
+                showToast(`⚠️ 이미지를 열 수 없습니다.\n파일이 손상되었거나 지원하지 않는 형식입니다. (${file.name})`);
+            };
+            testImg.onload = () => {
+                fabric.Image.fromURL(url, (img) => {
+                    showLoading(false);
+                    if (!img || !img.width || !img.height) {
+                        showToast(`⚠️ 이미지 데이터를 불러오지 못했습니다. (${file.name})`);
+                        return;
+                    }
+                    createProject(file.name, img.width, img.height, 'transparent', img);
+                });
+            };
+            testImg.src = url;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleImageAddToCanvas(file) {
+        if (!file.type.startsWith('image/')) {
+            showToast('⚠️ 이미지 파일이 아닙니다.');
+            return;
+        }
+        showLoading(true, '이미지 추가 중...');
+        const reader = new FileReader();
+        reader.onerror = () => {
+            showLoading(false);
+            showToast('⚠️ 파일을 읽는 중 오류가 발생했습니다.');
+        };
+        reader.onload = (e) => {
+            const url = e.target.result;
+            const testImg = new Image();
+            testImg.onerror = () => {
+                showLoading(false);
+                showToast(`⚠️ 이미지를 열 수 없습니다. (${file.name})`);
+            };
+            testImg.onload = () => {
+                fabric.Image.fromURL(url, (img) => {
+                    showLoading(false);
+                    if (!img || !img.width) {
+                        showToast(`⚠️ 이미지를 불러오지 못했습니다. (${file.name})`);
+                        return;
+                    }
+                    if (img.width > canvas.width) img.scaleToWidth(canvas.width * 0.8);
+                    img.set({ left: canvas.width/2, top: canvas.height/2, originX: 'center', originY: 'center' });
+                    canvas.add(img);
+                    canvas.setActiveObject(img);
+                    updateLayers();
+                    saveHistory("Add Image Layer");
+                });
+            };
+            testImg.src = url;
+        };
+        reader.readAsDataURL(file);
+    }
 
     // --- PDF Handling Functions ---
     async function handlePdfUpload(file) {
@@ -1957,18 +2056,32 @@
         try {
             const arrayBuffer = await file.arrayBuffer();
             const loadingTask = pdfjsLib.getDocument({data: arrayBuffer});
+
+            // 비밀번호 보호 PDF 감지
+            loadingTask.onPassword = (updatePassword, reason) => {
+                showLoading(false);
+                const pwd = prompt('🔒 비밀번호가 설정된 PDF입니다.\n비밀번호를 입력하세요:');
+                if (pwd) { updatePassword(pwd); showLoading(true, "PDF 로딩 중..."); }
+                else { showToast('⚠️ 비밀번호 없이 PDF를 열 수 없습니다.'); }
+            };
+
             currentPdf = await loadingTask.promise;
             
             if (currentPdf.numPages === 1) {
-                // Single page: import immediately
                 await importPdfPageAsImage(1);
             } else {
-                // Multiple pages: show selection modal
                 renderPdfPagePreviews(currentPdf);
                 document.getElementById('pdf-import-modal').classList.remove('hidden');
             }
         } catch (error) {
-            alert("PDF를 불러오는 중 오류가 발생했습니다: " + error.message);
+            showLoading(false);
+            let msg = 'PDF를 불러오지 못했습니다.';
+            if (error.name === 'PasswordException') msg = '⚠️ PDF 비밀번호가 올바르지 않습니다.';
+            else if (error.name === 'InvalidPDFException') msg = '⚠️ 유효하지 않은 PDF 파일입니다. 파일이 손상되었을 수 있습니다.';
+            else if (error.name === 'MissingPDFException') msg = '⚠️ PDF 파일을 찾을 수 없습니다.';
+            else if (error.message) msg = `⚠️ PDF 오류: ${error.message}`;
+            showToast(msg);
+            return;
         } finally {
             showLoading(false);
         }
@@ -2758,25 +2871,13 @@
             const obj = objects[i]; 
             if(obj.stroke === 'rgba(255, 0, 0, 0.5)' || obj === selectionShape) continue; 
             const el = document.createElement('div'); 
-            const isActive = obj === canvas.getActiveObject();
-            el.className = `layer-item ${isActive ? 'active' : ''} ${!obj.visible ? 'opacity-50' : ''}`; 
+            el.className = `layer-item ${obj === canvas.getActiveObject() ? 'active' : ''}`; 
             el.draggable = true; 
             el.dataset.index = i; 
             el.addEventListener('dragstart', handleDragStart); 
             el.addEventListener('dragover', handleDragOver); 
             el.addEventListener('drop', handleDrop); 
-            
-            // 클릭 시 레이어 선택 및 가시성 토글
-            el.onclick = () => { 
-                if (canvas.getActiveObject() === obj) {
-                    obj.visible = !obj.visible;
-                    if (!obj.visible) canvas.discardActiveObject();
-                } else {
-                    canvas.setActiveObject(obj); 
-                }
-                canvas.renderAll(); 
-                updateLayers(); 
-            }; 
+            el.onclick = () => { canvas.setActiveObject(obj); canvas.renderAll(); updateLayers(); }; 
             
             // v1.48: 레이어 우클릭 (PC)
             el.oncontextmenu = (e) => {
@@ -2816,8 +2917,7 @@
             else if(obj.type === 'polygon') { iconName = 'hexagon'; if(!layerLabel) layerLabel = '다각형'; }
             else if(obj.type === 'ellipse') { iconName = 'circle'; if(!layerLabel) layerLabel = '타원'; }
             else { if(!layerLabel) layerLabel = obj.type; }
-            
-            el.innerHTML = `<i data-lucide="${iconName}" size="11" class="${isActive ? 'text-[#4facfe]' : 'text-gray-500'} mr-2 flex-shrink-0"></i><span class="flex-1 truncate ${isActive ? 'text-white font-bold' : 'text-gray-400'} scroll-area" style="font-size:10px">${layerLabel}</span>${!obj.visible ? '<i data-lucide="eye-off" size="10" class="text-gray-600 ml-1"></i>' : ''}<i data-lucide="trash-2" size="9" class="text-gray-700 hover:text-red-500 ml-2 flex-shrink-0" onclick="event.stopPropagation(); deleteLayer(${i})"></i>`; 
+            el.innerHTML = `<i data-lucide="${obj.visible ? 'eye' : 'eye-off'}" size="8" class="text-gray-500 mr-2 hover:text-white flex-shrink-0" onclick="event.stopPropagation(); toggleVisible(${i})"></i><i data-lucide="${iconName}" size="10" class="text-blue-400 mr-2 flex-shrink-0"></i><span class="flex-1 truncate text-gray-300 pointer-events-none" style="font-size:10px">${layerLabel}</span><i data-lucide="trash-2" size="8" class="text-gray-600 hover:text-red-400 flex-shrink-0" onclick="event.stopPropagation(); deleteLayer(${i})"></i>`; 
             list.appendChild(el); 
         } 
         safeCreateIcons(); 
@@ -2878,9 +2978,7 @@
     async function callGemini(url, payload) { if (!checkApiKey()) return; let attempts = 0; const delays = [1000, 2000, 4000, 8000, 16000]; while (attempts < 5) { try { const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`HTTP ${response.status}`); return await response.json(); } catch (e) { attempts++; if (attempts < 5) await new Promise(r => setTimeout(r, delays[attempts - 1])); else throw e; } } }
     async function generateSticker() { if (!checkApiKey()) return; const prompt = document.getElementById('sticker-prompt').value; if (!prompt) return alert("프롬프트를 입력해주세요."); showLoading(true, "AI가 이미지를 생성 중입니다..."); try { const payload = { instances: { prompt: prompt }, parameters: { sampleCount: 1 } }; const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`; const result = await callGemini(url, payload); if (!result) return; const b64 = result.predictions?.[0]?.bytesBase64Encoded; if (b64) { fabric.Image.fromURL(`data:image/png;base64,${b64}`, img => { img.scale(0.5); img.set({ left: canvas.width/2, top: canvas.height/2, originX: 'center', originY: 'center' }); canvas.add(img); canvas.setActiveObject(img); updateLayers(); saveHistory("AI Sticker"); document.getElementById('sticker-modal').classList.add('hidden'); }); } else { throw new Error("이미지 생성 데이터 없음"); } } catch (e) { alert("이미지 생성 실패: " + e.message); } finally { showLoading(false); } }
     async function runSmartAnalysis() { if (!checkApiKey()) return; const dataUrl = canvas.toDataURL({ format: 'png', multiplier: 0.5 }); const base64Data = dataUrl.split(',')[1]; showLoading(true, "이미지 분석 중..."); document.getElementById('analysis-report-modal').classList.remove('hidden'); document.getElementById('analysis-loading').classList.remove('hidden'); document.getElementById('analysis-results').classList.add('hidden'); try { const prompt = "Describe this image. JSON format: { \"caption\": \"...\", \"mood\": \"...\" }"; const payload = { contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/png", data: base64Data } }] }], generationConfig: { responseMimeType: "application/json" } }; const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`; const result = await callGemini(url, payload); if (!result) return; const text = result.candidates?.[0]?.content?.parts?.[0]?.text; if(text) { const json = JSON.parse(text); document.getElementById('report-caption').innerText = json.caption; document.getElementById('report-mood').innerText = json.mood; document.getElementById('analysis-loading').classList.add('hidden'); document.getElementById('analysis-results').classList.remove('hidden'); } } catch (e) { alert("분석 실패: " + e.message); document.getElementById('analysis-report-modal').classList.add('hidden'); } finally { showLoading(false); } }
-    async function sendChat() { if (!checkApiKey()) return; const input = document.getElementById('chat-input'); const text = input.value.trim(); if (!text) return; const historyDiv = document.getElementById('chat-history'); historyDiv.innerHTML += `<div class="text-right text-white mb-2"><span class="bg-[#4facfe] text-black px-3 py-2 rounded-lg inline-block font-medium shadow-sm">${text}</span></div>`; input.value = ''; historyDiv.scrollTop = historyDiv.scrollHeight; try { const payload = { contents: [{ parts: [{ text: "Image Editor Tutor. Answer in Korean: " + text }] }] }; const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`; const result = await callGemini(url, payload); if (!result) return; const reply = result.candidates?.[0]?.content?.parts?.[0]?.text; historyDiv.innerHTML += `<div class="text-left text-gray-300 mb-2"><span class="bg-[#262626] px-3 py-2 rounded-lg inline-block border border-[#333]">${reply}</span></div>`; historyDiv.scrollTop = historyDiv.scrollHeight; safeCreateIcons(); } catch (e) { historyDiv.innerHTML += `<div class="text-left text-red-400 mb-2">Error: ${e.message}</div>`; } }
-    function clearChat() { if (confirm("채팅 내역을 초기화하시겠습니까?")) { document.getElementById('chat-history').innerHTML = '<div class="text-left text-gray-400 mb-2"><span class="bg-[#262626] px-3 py-2 rounded-lg inline-block border border-[#333]">채팅이 초기화되었습니다. 무엇이든 물어보세요! ✨</span></div>'; } }
-    function saveChat() { const chatBox = document.getElementById('chat-history'); let content = ""; const messages = chatBox.querySelectorAll('span'); messages.forEach(m => { const isUser = m.parentElement.classList.contains('text-right'); content += (isUser ? "[User]: " : "[AI]: ") + m.innerText + "\n\n"; }); if(!content.trim()) return alert("저장할 채팅 내역이 없습니다."); const blob = new Blob([content], {type: "text/plain"}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `chat_history_${Date.now()}.txt`; a.click(); }
+    async function sendChat() { if (!checkApiKey()) return; const input = document.getElementById('chat-input'); const text = input.value.trim(); if (!text) return; const historyDiv = document.getElementById('chat-history'); historyDiv.innerHTML += `<div class="text-right text-white mb-2"><span class="bg-blue-600 px-2 py-1 rounded inline-block">${text}</span></div>`; input.value = ''; try { const payload = { contents: [{ parts: [{ text: "Image Editor Tutor. Answer in Korean: " + text }] }] }; const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`; const result = await callGemini(url, payload); if (!result) return; const reply = result.candidates?.[0]?.content?.parts?.[0]?.text; historyDiv.innerHTML += `<div class="text-left text-gray-300 mb-2"><span class="bg-[#333] px-2 py-1 rounded inline-block">${reply}</span></div>`; historyDiv.scrollTop = historyDiv.scrollHeight; } catch (e) { historyDiv.innerHTML += `<div class="text-left text-red-400 mb-2">Error: ${e.message}</div>`; } }
     async function runGenerativeFill() { if (!checkApiKey()) return; const prompt = document.getElementById('gen-prompt').value; if (!prompt) return alert("프롬프트를 입력하세요."); canvas.discardActiveObject(); canvas.renderAll(); const dataUrl = canvas.toDataURL({ format: 'png' }); const base64Data = dataUrl.split(',')[1]; showLoading(true, "AI 생성 중..."); try { const payload = { contents: [{ parts: [{ text: "Edit: " + prompt }, { inlineData: { mimeType: "image/png", data: base64Data } }] }], generationConfig: { responseModalities: ['IMAGE'] } }; const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`; const result = await callGemini(url, payload); if (!result) return; const b64 = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data; if (b64) { fabric.Image.fromURL(`data:image/png;base64,${b64}`, img => { canvas.clear(); img.scale(canvas.width / img.width); canvas.add(img); updateLayers(); saveHistory("AI Gen Fill"); exitDrawMode(); }); } else { throw new Error("생성 실패"); } } catch (e) { alert("AI 처리 실패: " + e.message); } finally { showLoading(false); } }
     function runAI(mode) { if(mode === 'remove-bg' || mode === 'enhance') { document.getElementById('style-modal').classList.remove('hidden'); document.getElementById('style-prompt').value = mode === 'remove-bg' ? "Remove background, make it white." : "Enhance quality."; } }
     async function runStyle() { const prompt = document.getElementById('style-prompt').value; if(!prompt) return; document.getElementById('gen-prompt').value = prompt; document.getElementById('style-modal').classList.add('hidden'); runGenerativeFill(); }
